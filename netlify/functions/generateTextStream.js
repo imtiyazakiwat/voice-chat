@@ -52,44 +52,70 @@ export async function handler(event, context) {
 
     let sentenceBuffer = '';
     const sentences = [];
-
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-
-      const chunk = decoder.decode(value, { stream: true });
-      
-      // Parse SSE format
-      const lines = chunk.split('\n');
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const data = line.slice(6);
+    let lastChunkTime = Date.now();
+    const CHUNK_TIMEOUT = 2000; // 2 seconds timeout for immediate conversion
+    
+    // Timeout handling for immediate conversion
+    const processWithTimeout = async () => {
+      while (true) {
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('chunk_timeout')), CHUNK_TIMEOUT)
+        );
+        
+        try {
+          const result = await Promise.race([
+            reader.read(),
+            timeoutPromise
+          ]);
           
-          if (data === '[DONE]') continue;
+          if (result.done) break;
           
-          try {
-            const parsed = JSON.parse(data);
-            const content = parsed.choices?.[0]?.delta?.content;
-            
-            if (content) {
-              sentenceBuffer += content;
+          lastChunkTime = Date.now();
+          const chunk = decoder.decode(result.value, { stream: true });
+          
+          // Parse SSE format
+          const lines = chunk.split('\n');
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
               
-              // Check for sentence completion
-              if (/[.!?]\s*$/.test(sentenceBuffer)) {
-                const sentence = sentenceBuffer.trim();
-                if (sentence.length > 0) {
-                  sentences.push(sentence);
-                  sentenceBuffer = '';
+              if (data === '[DONE]') continue;
+              
+              try {
+                const parsed = JSON.parse(data);
+                const content = parsed.choices?.[0]?.delta?.content;
+                
+                if (content) {
+                  sentenceBuffer += content;
+                  
+                  // Check for sentence completion or buffer limit
+                  if (/[.!?]\s*$/.test(sentenceBuffer) || sentenceBuffer.length > 150) {
+                    const sentence = sentenceBuffer.trim();
+                    if (sentence.length > 0) {
+                      sentences.push(sentence);
+                      sentenceBuffer = '';
+                    }
+                  }
                 }
+              } catch (e) {
+                console.warn('Invalid JSON in stream:', data);
               }
             }
-          } catch (e) {
-            // Skip invalid JSON
-            console.warn('Invalid JSON in stream:', data);
+          }
+        } catch (error) {
+          if (error.message === 'chunk_timeout' && sentenceBuffer.trim()) {
+            // Timeout reached, process remaining buffer immediately
+            sentences.push(sentenceBuffer.trim());
+            sentenceBuffer = '';
+            break;
+          } else if (error.message !== 'chunk_timeout') {
+            throw error;
           }
         }
       }
-    }
+    };
+    
+    await processWithTimeout();
 
     // Handle any remaining buffer as a final sentence
     if (sentenceBuffer.trim()) {

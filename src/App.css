@@ -98,6 +98,59 @@ h1 {
   border-top: 1px solid #e0e0e0;
 }
 
+.controls-section {
+  margin-bottom: 15px;
+}
+
+.voice-emotion-controls {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  margin-bottom: 15px;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.control-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.control-group select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+}
+
+.control-group select:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.locked-indicator {
+  font-size: 12px;
+  color: #667eea;
+  font-weight: 500;
+  padding: 4px 8px;
+  background: #e8eaff;
+  border-radius: 12px;
+}
+
 .input-group {
   display: flex;
   gap: 10px;
@@ -215,6 +268,26 @@ button:disabled {
   
   .message {
     max-width: 85%;
+  }
+  
+  .voice-emotion-controls {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+  
+  .control-group {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .control-group label {
+    margin-bottom: 0;
+  }
+  
+  .control-group select {
+    min-width: 120px;
   }
   
   .input-group {

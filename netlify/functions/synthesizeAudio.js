@@ -21,6 +21,8 @@ export async function handler(event, context) {
   try {
     const body = JSON.parse(event.body);
     const text = body.text;
+    const emotion = body.emotion || 'neutral'; // Default emotion
+    const voice = body.voice || 'nova'; // Allow voice selection
 
     if (!text) {
       return {
@@ -36,7 +38,7 @@ export async function handler(event, context) {
       body: JSON.stringify({
         model: 'gpt-4o-mini-tts',
         messages: [{ role: 'user', content: text }],
-        voice: 'nova'
+        voice: voice
       })
     });
 

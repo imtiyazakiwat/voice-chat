@@ -9,6 +9,9 @@ export default function App() {
   const [audioQueue, setAudioQueue] = useState([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [messages, setMessages] = useState([]);
+  const [lockedEmotion, setLockedEmotion] = useState('neutral');
+  const [lockedVoice, setLockedVoice] = useState('nova');
+  const [conversationStarted, setConversationStarted] = useState(false);
   
   const audioQueueRef = useRef([]);
   const isPlayingRef = useRef(false);
@@ -56,20 +59,25 @@ export default function App() {
     }
   };
 
-  // Add audio to queue
+  // Add audio to queue and start immediate playback
   const addToAudioQueue = (url) => {
     audioQueueRef.current.push(url);
     setAudioQueue(prev => [...prev, url]);
     
-    // Start playing if we have enough buffer (2+ audio files)
-    if (!isPlayingRef.current && audioQueueRef.current.length >= 2) {
+    // Start playing immediately with first sentence (buffer line)
+    if (!isPlayingRef.current) {
       playNextAudio();
     }
   };
 
-  // Handle text generation and audio synthesis
+  // Handle text generation and audio synthesis with emotion locking
   const handleSendMessage = async (message) => {
     if (!message.trim()) return;
+
+    // Lock emotion and voice when conversation starts
+    if (!conversationStarted) {
+      setConversationStarted(true);
+    }
 
     setIsProcessing(true);
     setMessages(prev => [...prev, { type: 'user', text: message }]);
@@ -88,15 +96,19 @@ export default function App() {
 
       const data = await res.json();
       
-      // Process each sentence for TTS
+      // Process each sentence for TTS with locked emotion/voice
       for (const sentence of data.sentences) {
         setCurrentSentence(sentence);
         
-        // Synthesize audio for this sentence
+        // Synthesize audio for this sentence with locked parameters
         const ttsRes = await fetch('/.netlify/functions/synthesizeAudio', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: sentence })
+          body: JSON.stringify({
+            text: sentence,
+            voice: lockedVoice,
+            emotion: lockedEmotion
+          })
         });
 
         if (ttsRes.ok) {
@@ -224,6 +236,48 @@ export default function App() {
         </div>
 
         <div className="input-container">
+          <div className="controls-section">
+            <div className="voice-emotion-controls">
+              <div className="control-group">
+                <label>Voice:</label>
+                <select
+                  value={lockedVoice}
+                  onChange={(e) => setLockedVoice(e.target.value)}
+                  disabled={conversationStarted || isProcessing}
+                >
+                  <option value="alloy">Alloy</option>
+                  <option value="echo">Echo</option>
+                  <option value="fable">Fable</option>
+                  <option value="onyx">Onyx</option>
+                  <option value="nova">Nova</option>
+                  <option value="shimmer">Shimmer</option>
+                </select>
+              </div>
+              
+              <div className="control-group">
+                <label>Emotion:</label>
+                <select
+                  value={lockedEmotion}
+                  onChange={(e) => setLockedEmotion(e.target.value)}
+                  disabled={conversationStarted || isProcessing}
+                >
+                  <option value="neutral">Neutral</option>
+                  <option value="friendly">Friendly</option>
+                  <option value="professional">Professional</option>
+                  <option value="enthusiastic">Enthusiastic</option>
+                  <option value="calm">Calm</option>
+                  <option value="empathetic">Empathetic</option>
+                </select>
+              </div>
+              
+              {conversationStarted && (
+                <div className="locked-indicator">
+                  🔒 Settings locked for this conversation
+                </div>
+              )}
+            </div>
+          </div>
+          
           <div className="input-group">
             <textarea
               value={input}
@@ -235,7 +289,7 @@ export default function App() {
             />
             
             <div className="controls">
-              <button 
+              <button
                 className={`voice-btn ${isListening ? 'listening' : ''}`}
                 onClick={toggleVoiceInput}
                 disabled={isProcessing}
@@ -244,7 +298,7 @@ export default function App() {
                 {isListening ? '🛑' : '🎤'}
               </button>
               
-              <button 
+              <button
                 className="send-btn"
                 onClick={handleSubmit}
                 disabled={isProcessing || !input.trim()}
