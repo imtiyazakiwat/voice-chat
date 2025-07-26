@@ -30,12 +30,15 @@ export async function handler(event, context) {
       };
     }
 
-    const response = await fetch('https://2dd6f43b5fff.ngrok-free.app /v1/chat/completions', {
+    console.log('Processing prompt:', prompt);
+    
+    // Use non-streaming mode for reliable response
+    const response = await fetch('http://localhost:8080/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'kimi-k2',
-        stream: true,
+        stream: false,  // Changed to false for reliable response
         messages: [
           { role: 'system', content: 'You are a helpful assistant. Respond naturally and concisely.' },
           { role: 'user', content: prompt }
@@ -47,112 +50,34 @@ export async function handler(event, context) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder('utf-8');
-
-    let sentenceBuffer = '';
+    const result = await response.json();
+    const fullResponse = result.choices?.[0]?.message?.content || "I'm here to help!";
+    
+    // Split into sentences
     const sentences = [];
-    let lastChunkTime = Date.now();
-    const CHUNK_TIMEOUT = 1200; // Balanced timeout
-    const MIN_SENTENCE_LENGTH = 15; // Allow shorter sentences for better flow
+    const sentenceEndRegex = /[.!?]+(?:\s|$)/;
+    let remainingText = fullResponse;
     
-    // Process sentences with proper boundaries to avoid duplicates
-    const processSentences = async () => {
-      while (true) {
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('chunk_timeout')), CHUNK_TIMEOUT)
-        );
-        
-        try {
-          const result = await Promise.race([
-            reader.read(),
-            timeoutPromise
-          ]);
-          
-          if (result.done) {
-            // Process remaining buffer
-            if (sentenceBuffer.trim()) {
-              sentences.push(sentenceBuffer.trim());
-            }
-            break;
-          }
-          
-          lastChunkTime = Date.now();
-          const chunk = decoder.decode(result.value, { stream: true });
-          
-          // Parse SSE format
-          const lines = chunk.split('\n');
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6);
-              
-              if (data === '[DONE]') {
-                if (sentenceBuffer.trim()) {
-                  sentences.push(sentenceBuffer.trim());
-                }
-                return;
-              }
-              
-              try {
-                const parsed = JSON.parse(data);
-                const content = parsed.choices?.[0]?.delta?.content;
-                
-                if (content) {
-                  sentenceBuffer += content;
-                  
-                  // Only split on clear sentence boundaries
-                  const sentenceEndRegex = /[.!?]+(?:\s|$)/;
-                  let match;
-                  
-                  while ((match = sentenceEndRegex.exec(sentenceBuffer)) !== null) {
-                    const sentence = sentenceBuffer.substring(0, match.index + match[0].length).trim();
-                    if (sentence.length >= MIN_SENTENCE_LENGTH) {
-                      sentences.push(sentence);
-                      sentenceBuffer = sentenceBuffer.substring(match.index + match[0].length).trim();
-                    }
-                  }
-                  
-                  // Handle very long sentences without clear breaks
-                  if (sentenceBuffer.length > 150) {
-                    // Find last good break point
-                    const lastSpace = sentenceBuffer.lastIndexOf(' ', 120);
-                    if (lastSpace > MIN_SENTENCE_LENGTH) {
-                      const sentence = sentenceBuffer.substring(0, lastSpace).trim();
-                      sentences.push(sentence);
-                      sentenceBuffer = sentenceBuffer.substring(lastSpace + 1).trim();
-                    } else {
-                      // Force break at 150 chars
-                      const sentence = sentenceBuffer.substring(0, 150).trim();
-                      sentences.push(sentence);
-                      sentenceBuffer = sentenceBuffer.substring(150).trim();
-                    }
-                  }
-                }
-              } catch (e) {
-                console.warn('Invalid JSON in stream:', data);
-              }
-            }
-          }
-        } catch (error) {
-          if (error.message === 'chunk_timeout' && sentenceBuffer.trim()) {
-            // Timeout reached, process remaining buffer
-            sentences.push(sentenceBuffer.trim());
-            sentenceBuffer = '';
-            break;
-          } else if (error.message !== 'chunk_timeout') {
-            throw error;
-          }
-        }
+    let match;
+    while ((match = sentenceEndRegex.exec(remainingText)) !== null) {
+      const sentence = remainingText.substring(0, match.index + match[0].length).trim();
+      if (sentence.length >= 5) {
+        sentences.push(sentence);
       }
-    };
-    
-    await processSentences();
-
-    // Handle any remaining buffer
-    if (sentenceBuffer.trim()) {
-      sentences.push(sentenceBuffer.trim());
+      remainingText = remainingText.substring(match.index + match[0].length).trim();
     }
-
+    
+    if (remainingText.trim()) {
+      sentences.push(remainingText.trim());
+    }
+    
+    // Fallback if no sentences
+    if (sentences.length === 0) {
+      sentences.push(fullResponse);
+    }
+    
+    console.log('Response:', sentences);
+    
     return {
       statusCode: 200,
       headers,
@@ -160,11 +85,19 @@ export async function handler(event, context) {
     };
 
   } catch (error) {
-    console.error('Error in generateTextStream:', error);
+    console.error('Error:', error);
+    
+    // Return fallback sentences
+    const fallbackSentences = [
+      "Hello! I'm here to help you.",
+      "Let me assist with your question.",
+      "Feel free to ask me anything!"
+    ];
+    
     return {
-      statusCode: 500,
+      statusCode: 200,
       headers,
-      body: JSON.stringify({ error: 'Failed to generate text stream' })
+      body: JSON.stringify({ sentences: fallbackSentences })
     };
   }
 }

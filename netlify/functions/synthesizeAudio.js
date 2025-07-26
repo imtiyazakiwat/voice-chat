@@ -32,7 +32,7 @@ export async function handler(event, context) {
       };
     }
 
-    const response = await fetch('https://2dd6f43b5fff.ngrok-free.app /v1/chat/completions', {
+    const response = await fetch('http://localhost:8080/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -55,7 +55,7 @@ export async function handler(event, context) {
     }
 
     const audioPath = audioPathMatch[0];
-    const fullUrl = `https://2dd6f43b5fff.ngrok-free.app ${audioPath}`;
+    const fullUrl = `http://localhost:8080${audioPath}`;
 
     return {
       statusCode: 200,
