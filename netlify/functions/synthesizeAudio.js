@@ -32,7 +32,7 @@ export async function handler(event, context) {
       };
     }
 
-    const response = await fetch('https://77dbf3a6b234.ngrok-free.app/v1/chat/completions', {
+    const response = await fetch('http://13.53.131.77:8080/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -55,7 +55,7 @@ export async function handler(event, context) {
     }
 
     const audioPath = audioPathMatch[0];
-    const fullUrl = `https://77dbf3a6b234.ngrok-free.app${audioPath}`;
+    const fullUrl = `http://13.53.131.77:8080${audioPath}`;
 
     // Fetch the actual audio file and convert to base64 to avoid CORS issues
     const audioResponse = await fetch(fullUrl);

@@ -1,0 +1,246 @@
+.ai-animation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  position: relative;
+  background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.animation-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+}
+
+.state-label {
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 300;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+/* Idle State */
+.idle-icon {
+  font-size: 80px;
+  animation: gentle-float 3s ease-in-out infinite;
+}
+
+@keyframes gentle-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+/* Listening State */
+.listening .listening-circles {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+
+.listening .circle {
+  position: absolute;
+  border: 2px solid #4caf50;
+  border-radius: 50%;
+  opacity: 0;
+  animation: listening-pulse 2s ease-out infinite;
+}
+
+.listening .circle-1 {
+  width: 40px;
+  height: 40px;
+  top: 40px;
+  left: 40px;
+  animation-delay: 0s;
+}
+
+.listening .circle-2 {
+  width: 80px;
+  height: 80px;
+  top: 20px;
+  left: 20px;
+  animation-delay: 0.3s;
+}
+
+.listening .circle-3 {
+  width: 120px;
+  height: 120px;
+  top: 0;
+  left: 0;
+  animation-delay: 0.6s;
+}
+
+@keyframes listening-pulse {
+  0% {
+    transform: scale(0.5);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+}
+
+/* Thinking State */
+.thinking-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.brain-icon {
+  font-size: 60px;
+  animation: brain-think 2s ease-in-out infinite;
+}
+
+@keyframes brain-think {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  25% { transform: rotate(-10deg) scale(1.05); }
+  75% { transform: rotate(10deg) scale(1.05); }
+}
+
+.thinking-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.thinking-dots .dot {
+  width: 12px;
+  height: 12px;
+  background: #667eea;
+  border-radius: 50%;
+  animation: thinking-bounce 1.5s ease-in-out infinite;
+}
+
+.thinking-dots .dot-1 { animation-delay: 0s; }
+.thinking-dots .dot-2 { animation-delay: 0.2s; }
+.thinking-dots .dot-3 { animation-delay: 0.4s; }
+
+@keyframes thinking-bounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-20px);
+  }
+}
+
+/* Speaking State */
+.speaking-waves-container {
+  display: flex;
+  align-items: end;
+  gap: 4px;
+  height: 100px;
+}
+
+.speaking-wave {
+  width: 8px;
+  background: linear-gradient(to top, #667eea, #764ba2);
+  border-radius: 4px;
+  animation: speaking-wave 1s ease-in-out infinite;
+}
+
+@keyframes speaking-wave {
+  0%, 100% {
+    height: 20px;
+  }
+  50% {
+    height: 80px;
+  }
+}
+
+.speaking-wave:nth-child(odd) {
+  animation-direction: reverse;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+  .state-label {
+    font-size: 16px;
+  }
+  
+  .idle-icon {
+    font-size: 60px;
+  }
+  
+  .brain-icon {
+    font-size: 50px;
+  }
+  
+  .listening .listening-circles {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .listening .circle-1 {
+    width: 30px;
+    height: 30px;
+    top: 35px;
+    left: 35px;
+  }
+  
+  .listening .circle-2 {
+    width: 60px;
+    height: 60px;
+    top: 20px;
+    left: 20px;
+  }
+  
+  .listening .circle-3 {
+    width: 100px;
+    height: 100px;
+  }
+}
+
+/* Smooth transitions between states */
+.ai-animation {
+  transition: all 0.3s ease;
+}
+
+.ai-animation * {
+  transition: all 0.3s ease;
+}
+
+/* Glow effects */
+.ai-animation::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(102, 126, 234, 0.1) 0%, transparent 70%);
+  animation: rotate-glow 20s linear infinite;
+}
+
+@keyframes rotate-glow {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Particle effects */
+.ai-animation::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,0.3), transparent),
+    radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.2), transparent),
+    radial-gradient(1px 1px at 90px 40px, rgba(255,255,255,0.3), transparent);
+  background-repeat: repeat;
+  background-size: 200px 100px;
+  animation: sparkle 10s linear infinite;
+}
+
+@keyframes sparkle {
+  0% { transform: translateY(0px); }
+  100% { transform: translateY(-100px); opacity: 0; }
+}
