@@ -1,0 +1,72 @@
+// netlify/functions/synthesizeAudio.js
+// Use native fetch in Node.js 18+
+
+export async function handler(event, context) {
+  // Enable CORS
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Content-Type': 'application/json'
+  };
+
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers,
+      body: ''
+    };
+  }
+
+  try {
+    const body = JSON.parse(event.body);
+    const text = body.text;
+
+    if (!text) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'Text is required' })
+      };
+    }
+
+    const response = await fetch('http://localhost:8080/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini-tts',
+        messages: [{ role: 'user', content: text }],
+        voice: 'nova'
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.text();
+    
+    // Extract audio path from response
+    const audioPathMatch = result.match(/\/media\/[^\"]+\.wav/);
+    if (!audioPathMatch) {
+      throw new Error('No audio path found in response');
+    }
+
+    const audioPath = audioPathMatch[0];
+    const fullUrl = `http://localhost:8080${audioPath}`;
+
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({ audioUrl: fullUrl })
+    };
+
+  } catch (error) {
+    console.error('Error in synthesizeAudio:', error);
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ error: 'Failed to synthesize audio' })
+    };
+  }
+}
