@@ -34,6 +34,9 @@ export default function App() {
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
       
+      // Add debugging
+      console.log('Playing audio URL:', audioUrl.substring(0, 100) + '...');
+      
       // Preload next audio while current is playing
       if (audioQueueRef.current.length > 0) {
         const nextAudio = new Audio(audioQueueRef.current[0]);
@@ -41,6 +44,7 @@ export default function App() {
       }
       
       audio.onended = () => {
+        console.log('Audio playback completed');
         isPlayingRef.current = false;
         setIsPlaying(false);
         
@@ -51,19 +55,45 @@ export default function App() {
 
       audio.onerror = (error) => {
         console.error('Audio playback error:', error);
+        console.error('Audio source:', audioUrl);
         isPlayingRef.current = false;
         setIsPlaying(false);
-        playNextAudio();
+        
+        // Skip this audio and try next
+        setTimeout(() => playNextAudio(), 100);
       };
 
       // Reduce initial load delay
       audio.preload = 'auto';
-      await audio.play();
+      
+      // Add canplay event to ensure audio is ready
+      audio.addEventListener('canplay', async () => {
+        try {
+          await audio.play();
+        } catch (playError) {
+          console.error('Play failed:', playError);
+          audio.onerror(playError);
+        }
+      }, { once: true });
+      
+      // Add load error handling
+      audio.addEventListener('loadstart', () => {
+        console.log('Audio load started');
+      });
+      
+      audio.addEventListener('loadeddata', () => {
+        console.log('Audio data loaded');
+      });
+      
+      audio.addEventListener('error', (e) => {
+        console.error('Audio element error:', e);
+      });
+
     } catch (error) {
       console.error('Failed to play audio:', error);
       isPlayingRef.current = false;
       setIsPlaying(false);
-      playNextAudio();
+      setTimeout(() => playNextAudio(), 100);
     }
   };
 

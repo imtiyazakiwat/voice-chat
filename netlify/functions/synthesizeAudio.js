@@ -32,7 +32,7 @@ export async function handler(event, context) {
       };
     }
 
-    const response = await fetch('http://localhost:8080/v1/chat/completions', {
+    const response = await fetch('https://77dbf3a6b234.ngrok-free.app/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -55,12 +55,24 @@ export async function handler(event, context) {
     }
 
     const audioPath = audioPathMatch[0];
-    const fullUrl = `http://localhost:8080${audioPath}`;
+    const fullUrl = `https://77dbf3a6b234.ngrok-free.app${audioPath}`;
+
+    // Fetch the actual audio file and convert to base64 to avoid CORS issues
+    const audioResponse = await fetch(fullUrl);
+    if (!audioResponse.ok) {
+      throw new Error(`Failed to fetch audio file: ${audioResponse.status}`);
+    }
+
+    const audioBuffer = await audioResponse.arrayBuffer();
+    const base64Audio = Buffer.from(audioBuffer).toString('base64');
+    
+    // Create a data URL with the correct MIME type for WAV audio
+    const dataUrl = `data:audio/wav;base64,${base64Audio}`;
 
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ audioUrl: fullUrl })
+      body: JSON.stringify({ audioUrl: dataUrl })
     };
 
   } catch (error) {

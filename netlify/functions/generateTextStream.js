@@ -33,7 +33,7 @@ export async function handler(event, context) {
     console.log('Processing prompt:', prompt);
     
     // Use non-streaming mode for reliable response
-    const response = await fetch('http://localhost:8080/v1/chat/completions', {
+    const response = await fetch('https://77dbf3a6b234.ngrok-free.app/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
