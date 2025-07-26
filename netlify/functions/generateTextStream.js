@@ -30,7 +30,7 @@ export async function handler(event, context) {
       };
     }
 
-    const response = await fetch('http://localhost:8080/v1/chat/completions', {
+    const response = await fetch('https://52c46ae1c48c.ngrok-free.app/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -53,10 +53,11 @@ export async function handler(event, context) {
     let sentenceBuffer = '';
     const sentences = [];
     let lastChunkTime = Date.now();
-    const CHUNK_TIMEOUT = 2000; // 2 seconds timeout for immediate conversion
+    const CHUNK_TIMEOUT = 1200; // Balanced timeout
+    const MIN_SENTENCE_LENGTH = 15; // Allow shorter sentences for better flow
     
-    // Timeout handling for immediate conversion
-    const processWithTimeout = async () => {
+    // Process sentences with proper boundaries to avoid duplicates
+    const processSentences = async () => {
       while (true) {
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('chunk_timeout')), CHUNK_TIMEOUT)
@@ -68,7 +69,13 @@ export async function handler(event, context) {
             timeoutPromise
           ]);
           
-          if (result.done) break;
+          if (result.done) {
+            // Process remaining buffer
+            if (sentenceBuffer.trim()) {
+              sentences.push(sentenceBuffer.trim());
+            }
+            break;
+          }
           
           lastChunkTime = Date.now();
           const chunk = decoder.decode(result.value, { stream: true });
@@ -79,7 +86,12 @@ export async function handler(event, context) {
             if (line.startsWith('data: ')) {
               const data = line.slice(6);
               
-              if (data === '[DONE]') continue;
+              if (data === '[DONE]') {
+                if (sentenceBuffer.trim()) {
+                  sentences.push(sentenceBuffer.trim());
+                }
+                return;
+              }
               
               try {
                 const parsed = JSON.parse(data);
@@ -88,12 +100,31 @@ export async function handler(event, context) {
                 if (content) {
                   sentenceBuffer += content;
                   
-                  // Check for sentence completion or buffer limit
-                  if (/[.!?]\s*$/.test(sentenceBuffer) || sentenceBuffer.length > 150) {
-                    const sentence = sentenceBuffer.trim();
-                    if (sentence.length > 0) {
+                  // Only split on clear sentence boundaries
+                  const sentenceEndRegex = /[.!?]+(?:\s|$)/;
+                  let match;
+                  
+                  while ((match = sentenceEndRegex.exec(sentenceBuffer)) !== null) {
+                    const sentence = sentenceBuffer.substring(0, match.index + match[0].length).trim();
+                    if (sentence.length >= MIN_SENTENCE_LENGTH) {
                       sentences.push(sentence);
-                      sentenceBuffer = '';
+                      sentenceBuffer = sentenceBuffer.substring(match.index + match[0].length).trim();
+                    }
+                  }
+                  
+                  // Handle very long sentences without clear breaks
+                  if (sentenceBuffer.length > 150) {
+                    // Find last good break point
+                    const lastSpace = sentenceBuffer.lastIndexOf(' ', 120);
+                    if (lastSpace > MIN_SENTENCE_LENGTH) {
+                      const sentence = sentenceBuffer.substring(0, lastSpace).trim();
+                      sentences.push(sentence);
+                      sentenceBuffer = sentenceBuffer.substring(lastSpace + 1).trim();
+                    } else {
+                      // Force break at 150 chars
+                      const sentence = sentenceBuffer.substring(0, 150).trim();
+                      sentences.push(sentence);
+                      sentenceBuffer = sentenceBuffer.substring(150).trim();
                     }
                   }
                 }
@@ -104,7 +135,7 @@ export async function handler(event, context) {
           }
         } catch (error) {
           if (error.message === 'chunk_timeout' && sentenceBuffer.trim()) {
-            // Timeout reached, process remaining buffer immediately
+            // Timeout reached, process remaining buffer
             sentences.push(sentenceBuffer.trim());
             sentenceBuffer = '';
             break;
@@ -115,9 +146,9 @@ export async function handler(event, context) {
       }
     };
     
-    await processWithTimeout();
+    await processSentences();
 
-    // Handle any remaining buffer as a final sentence
+    // Handle any remaining buffer
     if (sentenceBuffer.trim()) {
       sentences.push(sentenceBuffer.trim());
     }

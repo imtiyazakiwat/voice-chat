@@ -23,7 +23,7 @@ A streaming voice chat web application built with React and Netlify Functions th
 ## Prerequisites
 
 1. **Node.js** (v16 or higher)
-2. **g4f API** running locally on `http://localhost:8080`
+2. **g4f API** running locally on `https://52c46ae1c48c.ngrok-free.app`
 3. **Netlify CLI** (for development)
 
 ## Setup Instructions
@@ -37,7 +37,7 @@ npm install
 
 ### 2. Start g4f API
 
-Ensure your g4f API is running on `http://localhost:8080` with:
+Ensure your g4f API is running on `https://52c46ae1c48c.ngrok-free.app` with:
 - Kimi-k2 model available
 - GPT-4o-mini-tts model available
 - TTS voice: "nova"
@@ -95,7 +95,7 @@ npm run build
 
 Create `.env` file for local development:
 ```
-REACT_APP_API_URL=http://localhost:8080
+REACT_APP_API_URL=https://52c46ae1c48c.ngrok-free.app
 ```
 
 ### Netlify Configuration

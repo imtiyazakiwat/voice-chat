@@ -18,7 +18,7 @@ export default function App() {
   const recognitionRef = useRef(null);
   const audioRef = useRef(null);
 
-  // Audio playback management
+  // Audio playback management with preloading for continuous speech
   const playNextAudio = async () => {
     if (audioQueueRef.current.length === 0 || isPlayingRef.current) {
       return;
@@ -34,12 +34,18 @@ export default function App() {
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
       
+      // Preload next audio while current is playing
+      if (audioQueueRef.current.length > 0) {
+        const nextAudio = new Audio(audioQueueRef.current[0]);
+        nextAudio.load(); // Preload next audio
+      }
+      
       audio.onended = () => {
         isPlayingRef.current = false;
         setIsPlaying(false);
         
         if (audioQueueRef.current.length > 0) {
-          setTimeout(() => playNextAudio(), 500); // Small delay between sentences
+          setTimeout(() => playNextAudio(), 150); // Small delay for audio continuity
         }
       };
 
@@ -47,9 +53,11 @@ export default function App() {
         console.error('Audio playback error:', error);
         isPlayingRef.current = false;
         setIsPlaying(false);
-        playNextAudio(); // Try next audio
+        playNextAudio();
       };
 
+      // Reduce initial load delay
+      audio.preload = 'auto';
       await audio.play();
     } catch (error) {
       console.error('Failed to play audio:', error);
